@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import z from "zod";
 import { Role } from "../generated/prisma/enums.ts";
 import jwt from "jsonwebtoken";
+import { authMiddleware, requireRole, type AuthRequest } from "../middleware/auth.ts";
 
 export const authRouter = Router();
 
@@ -117,4 +118,36 @@ authRouter.post("/login", async(req,res)=>{
             message: "Something went wrong",
         });
     }   
+})
+
+
+authRouter.get("/me",authMiddleware,requireRole(["Student"]), async(req:AuthRequest,res)=>{
+    
+    try{
+    const userid = req.user?.userId;
+
+    if(!userid) {
+        return res.status(401).json({
+            message : "User id is missing"
+        })
+    }
+
+
+    const user = await prisma.user.findUnique({where:{ id :userid}})
+
+    const name = user?.name
+    const id = user?.id
+    const role = user?.role
+    const usermail = user?.email 
+
+    return res.status(200).json({
+     message : "User Profile is fetched",
+       name,id,role,usermail
+                    
+
+    })
+}catch(e){
+    res.status(500).json({ message: "Something went wrong" });
+}
+
 })
